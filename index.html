@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Video Recommendation System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .file-upload-area {
+            border: 2px dashed #cbd5e0;
+            transition: all 0.3s ease;
+        }
+        .file-upload-area:hover {
+            border-color: #4299e1;
+            background-color: #ebf8ff;
+        }
+        .video-card {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .video-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Header -->
+    <header class="bg-gradient-to-r from-red-600 to-red-700 text-white shadow-lg">
+        <div class="container mx-auto px-4 py-6">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <svg class="w-10 h-10" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"/>
+                    </svg>
+                    <div>
+                        <h1 class="text-2xl font-bold">YouTube Video Finder</h1>
+                        <p class="text-red-100 text-sm">AI-Powered Video Recommendation System</p>
+                    </div>
+                </div>
+                <div class="text-right text-sm text-red-100">
+                    <p>Powered by Machine Learning</p>
+                    <p>Semantic Search Engine</p>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 py-8">
+        <!-- Search Section -->
+        <div class="max-w-4xl mx-auto mb-8">
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-xl font-semibold text-gray-800 mb-4">Find Your Perfect Video</h2>
+                
+                <!-- Text Query Input -->
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        <svg class="inline w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                        </svg>
+                        Search Query
+                    </label>
+                    <textarea 
+                        id="queryInput"
+                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent resize-none"
+                        rows="3"
+                        placeholder="e.g., machine learning tutorial, transformer architecture, neural networks explained..."
+                    ></textarea>
+                </div>
+
+                <!-- File Upload Section -->
+                <div class="grid md:grid-cols-2 gap-4 mb-4">
+                    <!-- PDF/Word Upload -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            <svg class="inline w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                            </svg>
+                            Document (PDF/Word)
+                        </label>
+                        <div class="file-upload-area rounded-lg p-4 text-center cursor-pointer">
+                            <input type="file" id="pdfInput" accept=".pdf,.doc,.docx" class="hidden">
+                            <p class="text-sm text-gray-600">Click or drag PDF/Word file here</p>
+                            <p class="text-xs text-gray-400 mt-1">Max 50MB</p>
+                        </div>
+                        <p id="pdfFileName" class="text-xs text-gray-500 mt-1"></p>
+                    </div>
+
+                    <!-- Image Upload -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            <svg class="inline w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                            </svg>
+                            Image (Optional)
+                        </label>
+                        <div class="file-upload-area rounded-lg p-4 text-center cursor-pointer">
+                            <input type="file" id="imageInput" accept="image/*" class="hidden">
+                            <p class="text-sm text-gray-600">Click or drag image here</p>
+                            <p class="text-xs text-gray-400 mt-1">JPG, PNG, etc.</p>
+                        </div>
+                        <p id="imageFileName" class="text-xs text-gray-500 mt-1"></p>
+                    </div>
+                </div>
+
+                <!-- Top K Selection -->
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Number of Results: <span id="topKValue" class="text-red-600 font-semibold">5</span>
+                    </label>
+                    <input 
+                        type="range" 
+                        id="topKSlider" 
+                        min="1" 
+                        max="10" 
+                        value="5"
+                        class="w-full h-2 bg-gray-200 rounded-lg cursor-pointer accent-red-600"
+                    >
+                </div>
+
+                <!-- Search Button -->
+                <button 
+                    id="searchBtn"
+                    class="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-200 flex items-center justify-center space-x-2"
+                >
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                    </svg>
+                    <span>Search Videos</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Loading Indicator -->
+        <div id="loadingIndicator" class="hidden max-w-4xl mx-auto mb-8">
+            <div class="bg-white rounded-lg shadow-md p-6 text-center">
+                <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-4 border-red-600 mb-4"></div>
+                <p class="text-gray-600">Analyzing and finding best matches...</p>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div id="resultsSection" class="hidden max-w-6xl mx-auto">
+            <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                <h2 class="text-2xl font-bold text-gray-800 mb-2">
+                    🎥 Top Recommended Videos
+                </h2>
+                <div id="metricsDisplay" class="text-sm text-gray-600">
+                    <!-- Metrics will be inserted here -->
+                </div>
+            </div>
+
+            <!-- Results Grid -->
+            <div id="resultsGrid" class="grid md:grid-cols-2 gap-6">
+                <!-- Video cards will be inserted here -->
+            </div>
+        </div>
+
+        <!-- Error Message -->
+        <div id="errorMessage" class="hidden max-w-4xl mx-auto">
+            <div class="bg-red-50 border-l-4 border-red-500 rounded-lg p-4">
+                <div class="flex items-center">
+                    <svg class="w-6 h-6 text-red-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <p class="text-red-700 font-medium">Please provide at least one input: text query, document, or image</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-gray-300 mt-16 py-6">
+        <div class="container mx-auto px-4 text-center">
+            <p class="text-sm">© 2025 YouTube Video Recommendation System</p>
+            <p class="text-xs mt-2">Built with Python, Sentence Transformers & Machine Learning</p>
+        </div>
+    </footer>
+
+    <script>
+        // File upload handlers
+        const pdfInput = document.getElementById('pdfInput');
+        const imageInput = document.getElementById('imageInput');
+        const pdfFileName = document.getElementById('pdfFileName');
+        const imageFileName = document.getElementById('imageFileName');
+
+        document.querySelector('.file-upload-area:nth-of-type(1)').addEventListener('click', () => {
+            pdfInput.click();
+        });
+
+        document.querySelector('.file-upload-area:nth-of-type(2)').addEventListener('click', () => {
+            imageInput.click();
+        });
+
+        pdfInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                pdfFileName.textContent = `Selected: ${e.target.files[0].name}`;
+            }
+        });
+
+        imageInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                imageFileName.textContent = `Selected: ${e.target.files[0].name}`;
+            }
+        });
+
+        // Top K slider
+        const topKSlider = document.getElementById('topKSlider');
+        const topKValue = document.getElementById('topKValue');
+        
+        topKSlider.addEventListener('input', (e) => {
+            topKValue.textContent = e.target.value;
+        });
+
+        // Search button handler
+        const searchBtn = document.getElementById('searchBtn');
+        const queryInput = document.getElementById('queryInput');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        const resultsSection = document.getElementById('resultsSection');
+        const errorMessage = document.getElementById('errorMessage');
+        const resultsGrid = document.getElementById('resultsGrid');
+        const metricsDisplay = document.getElementById('metricsDisplay');
+
+        searchBtn.addEventListener('click', async () => {
+            // Validate input
+            const query = queryInput.value.trim();
+            const pdfFile = pdfInput.files[0];
+            const imageFile = imageInput.files[0];
+
+            if (!query && !pdfFile && !imageFile) {
+                errorMessage.classList.remove('hidden');
+                setTimeout(() => errorMessage.classList.add('hidden'), 3000);
+                return;
+            }
+
+            // Hide error and results
+            errorMessage.classList.add('hidden');
+            resultsSection.classList.add('hidden');
+
+            // Show loading
+            loadingIndicator.classList.remove('hidden');
+
+            // Simulate API call (replace with actual backend call)
+            setTimeout(() => {
+                loadingIndicator.classList.add('hidden');
+                displayResults(mockResults);
+            }, 2000);
+        });
+
+        function displayResults(results) {
+            // Display metrics
+            const avgSimilarity = (results.reduce((sum, r) => sum + r.similarity_score, 0) / results.length).toFixed(3);
+            metricsDisplay.innerHTML = `
+                <div class="flex flex-wrap gap-4 text-sm">
+                    <div>📊 Average Similarity: <span class="font-semibold">${avgSimilarity}</span></div>
+                    <div>🌈 Diversity: <span class="font-semibold">${new Set(results.map(r => r.channel)).size}/${results.length} channels</span></div>
+                    <div>⭐ Quality Score: <span class="font-semibold">${(avgSimilarity * 100).toFixed(0)}/100</span></div>
+                </div>
+            `;
+
+            // Display video cards
+            resultsGrid.innerHTML = results.map(video => `
+                <div class="video-card bg-white rounded-lg shadow-md overflow-hidden">
+                    <div class="relative">
+                        <img src="${video.thumbnail}" alt="${video.title}" class="w-full h-48 object-cover">
+                        <div class="absolute bottom-2 right-2 bg-black bg-opacity-75 text-white text-xs px-2 py-1 rounded">
+                            ${video.duration}
+                        </div>
+                        <div class="absolute top-2 left-2 bg-red-600 text-white text-xs font-bold px-2 py-1 rounded">
+                            #${video.rank}
+                        </div>
+                    </div>
+                    <div class="p-4">
+                        <h3 class="font-semibold text-gray-800 mb-2 line-clamp-2 hover:text-red-600">
+                            <a href="${video.url}" target="_blank">${video.title}</a>
+                        </h3>
+                        <p class="text-sm text-gray-600 mb-3">${video.channel}</p>
+                        <div class="flex items-center text-xs text-gray-500 space-x-3 mb-3">
+                            <span>👁️ ${video.view_count}</span>
+                            <span>📅 ${video.published_date}</span>
+                        </div>
+                        <div class="flex items-center justify-between text-xs mb-3">
+                            <span class="bg-green-100 text-green-700 px-2 py-1 rounded">
+                                🎯 ${(video.similarity_score * 100).toFixed(1)}%
+                            </span>
+                            <span class="bg-blue-100 text-blue-700 px-2 py-1 rounded">
+                                ⭐ ${video.final_score.toFixed(3)}
+                            </span>
+                        </div>
+                        <p class="text-xs text-gray-600 italic mb-2">💡 ${video.why_relevant}</p>
+                        <p class="text-xs text-gray-500 line-clamp-2">${video.summary}</p>
+                    </div>
+                </div>
+            `).join('');
+
+            resultsSection.classList.remove('hidden');
+        }
+
+        // Mock data for demonstration
+        const mockResults = [
+            {
+                rank: 1,
+                video_id: "E0Hmnixke2g",
+                title: "All Machine Learning algorithms explained in 17 min",
+                channel: "Infinite Codes",
+                url: "https://www.youtube.com/watch?v=E0Hmnixke2g",
+                thumbnail: "https://i.ytimg.com/vi/E0Hmnixke2g/hqdefault.jpg",
+                duration: "16:30",
+                view_count: "1.6M",
+                published_date: "2024-09-17",
+                similarity_score: 0.673,
+                final_score: 0.681,
+                summary: "All Machine Learning algorithms intuitively explained in 17 min",
+                why_relevant: "Discusses machine learning algorithms directly matching your query"
+            },
+            {
+                rank: 2,
+                video_id: "qNxrPri1V0I",
+                title: "Learn Machine Learning Like a GENIUS and Not Waste Time",
+                channel: "Infinite Codes",
+                url: "https://www.youtube.com/watch?v=qNxrPri1V0I",
+                thumbnail: "https://i.ytimg.com/vi/qNxrPri1V0I/hqdefault.jpg",
+                duration: "15:03",
+                view_count: "1.1M",
+                published_date: "2024-11-14",
+                similarity_score: 0.598,
+                final_score: 0.628,
+                summary: "Learn Machine Learning Like a GENIUS and Not Waste Time",
+                why_relevant: "Discusses learning strategies for machine learning"
+            }
+        ];
+    </script>
+</body>
+</html>
