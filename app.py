@@ -4,7 +4,7 @@ Flask web application cho YouTube Video Recommendation System
 Serve cả frontend và backend API
 """
 
-from flask import Flask, request, jsonify, render_template, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 import sys
 import os
@@ -22,9 +22,7 @@ from utils.logger import get_logger
 logger = get_logger(__name__)
 
 # Initialize Flask app
-app = Flask(__name__, 
-            static_folder='static',
-            template_folder='templates')
+app = Flask(__name__, static_folder='static')
 CORS(app)
 
 # Initialize components
@@ -62,7 +60,29 @@ def initialize_system():
 @app.route('/')
 def index():
     """Serve trang chủ"""
-    return render_template('index.html')
+    # Serve index.html từ thư mục hiện tại
+    index_path = 'index.html'
+    if os.path.exists(index_path):
+        with open(index_path, 'r', encoding='utf-8') as f:
+            return f.read()
+    else:
+        return """
+        <html>
+        <head><title>Error</title></head>
+        <body>
+        <h1>Error: index.html not found!</h1>
+        <p>Please create 'templates' folder and move index.html there, or place index.html in the root directory.</p>
+        <pre>
+Required structure:
+Computer-Vision_Recommendation_System-main/
+├── app.py
+├── index.html  (hoặc)
+└── templates/
+    └── index.html
+        </pre>
+        </body>
+        </html>
+        """, 404
 
 @app.route('/api/search', methods=['POST'])
 def api_search():
