@@ -78,7 +78,7 @@
                             </svg>
                             Document (PDF/Word)
                         </label>
-                        <div class="file-upload-area rounded-lg p-4 text-center cursor-pointer">
+                        <div class="file-upload-area rounded-lg p-4 text-center cursor-pointer" id="pdfUploadArea">
                             <input type="file" id="pdfInput" accept=".pdf,.doc,.docx" class="hidden">
                             <p class="text-sm text-gray-600">Click or drag PDF/Word file here</p>
                             <p class="text-xs text-gray-400 mt-1">Max 50MB</p>
@@ -94,7 +94,7 @@
                             </svg>
                             Image (Optional)
                         </label>
-                        <div class="file-upload-area rounded-lg p-4 text-center cursor-pointer">
+                        <div class="file-upload-area rounded-lg p-4 text-center cursor-pointer" id="imageUploadArea">
                             <input type="file" id="imageInput" accept="image/*" class="hidden">
                             <p class="text-sm text-gray-600">Click or drag image here</p>
                             <p class="text-xs text-gray-400 mt-1">JPG, PNG, etc.</p>
@@ -136,6 +136,7 @@
             <div class="bg-white rounded-lg shadow-md p-6 text-center">
                 <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-4 border-red-600 mb-4"></div>
                 <p class="text-gray-600">Analyzing and finding best matches...</p>
+                <p class="text-gray-500 text-sm mt-2">This may take a few seconds</p>
             </div>
         </div>
 
@@ -163,7 +164,9 @@
                     <svg class="w-6 h-6 text-red-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                     </svg>
-                    <p class="text-red-700 font-medium">Please provide at least one input: text query, document, or image</p>
+                    <div>
+                        <p class="text-red-700 font-medium" id="errorText">An error occurred</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -183,12 +186,14 @@
         const imageInput = document.getElementById('imageInput');
         const pdfFileName = document.getElementById('pdfFileName');
         const imageFileName = document.getElementById('imageFileName');
+        const pdfUploadArea = document.getElementById('pdfUploadArea');
+        const imageUploadArea = document.getElementById('imageUploadArea');
 
-        document.querySelector('.file-upload-area:nth-of-type(1)').addEventListener('click', () => {
+        pdfUploadArea.addEventListener('click', () => {
             pdfInput.click();
         });
 
-        document.querySelector('.file-upload-area:nth-of-type(2)').addEventListener('click', () => {
+        imageUploadArea.addEventListener('click', () => {
             imageInput.click();
         });
 
@@ -218,6 +223,7 @@
         const loadingIndicator = document.getElementById('loadingIndicator');
         const resultsSection = document.getElementById('resultsSection');
         const errorMessage = document.getElementById('errorMessage');
+        const errorText = document.getElementById('errorText');
         const resultsGrid = document.getElementById('resultsGrid');
         const metricsDisplay = document.getElementById('metricsDisplay');
 
@@ -228,8 +234,7 @@
             const imageFile = imageInput.files[0];
 
             if (!query && !pdfFile && !imageFile) {
-                errorMessage.classList.remove('hidden');
-                setTimeout(() => errorMessage.classList.add('hidden'), 3000);
+                showError('Please provide at least one input: text query, document, or image');
                 return;
             }
 
@@ -239,21 +244,75 @@
 
             // Show loading
             loadingIndicator.classList.remove('hidden');
+            searchBtn.disabled = true;
 
-            // Simulate API call (replace with actual backend call)
-            setTimeout(() => {
+            try {
+                // Prepare form data
+                const formData = new FormData();
+                
+                if (query) {
+                    formData.append('query', query);
+                }
+                
+                if (pdfFile) {
+                    formData.append('pdf', pdfFile);
+                }
+                
+                if (imageFile) {
+                    formData.append('image', imageFile);
+                }
+                
+                formData.append('top_k', topKSlider.value);
+
+                // Call API
+                const response = await fetch('/api/search', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Search failed');
+                }
+
+                const results = await response.json();
+
+                // Hide loading
                 loadingIndicator.classList.add('hidden');
-                displayResults(mockResults);
-            }, 2000);
+
+                // Display results
+                if (results && results.length > 0) {
+                    displayResults(results);
+                } else {
+                    showError('No matching videos found. Try different search terms.');
+                }
+
+            } catch (error) {
+                console.error('Search error:', error);
+                loadingIndicator.classList.add('hidden');
+                showError(error.message || 'An error occurred during search. Please try again.');
+            } finally {
+                searchBtn.disabled = false;
+            }
         });
 
+        function showError(message) {
+            errorText.textContent = message;
+            errorMessage.classList.remove('hidden');
+            setTimeout(() => errorMessage.classList.add('hidden'), 5000);
+        }
+
         function displayResults(results) {
+            // Calculate metrics
+            const similarities = results.map(r => r.similarity_score);
+            const avgSimilarity = similarities.reduce((a, b) => a + b, 0) / similarities.length;
+            const uniqueChannels = new Set(results.map(r => r.channel)).size;
+
             // Display metrics
-            const avgSimilarity = (results.reduce((sum, r) => sum + r.similarity_score, 0) / results.length).toFixed(3);
             metricsDisplay.innerHTML = `
                 <div class="flex flex-wrap gap-4 text-sm">
-                    <div>📊 Average Similarity: <span class="font-semibold">${avgSimilarity}</span></div>
-                    <div>🌈 Diversity: <span class="font-semibold">${new Set(results.map(r => r.channel)).size}/${results.length} channels</span></div>
+                    <div>📊 Average Similarity: <span class="font-semibold">${avgSimilarity.toFixed(3)}</span></div>
+                    <div>🌈 Diversity: <span class="font-semibold">${uniqueChannels}/${results.length} channels</span></div>
                     <div>⭐ Quality Score: <span class="font-semibold">${(avgSimilarity * 100).toFixed(0)}/100</span></div>
                 </div>
             `;
@@ -262,9 +321,9 @@
             resultsGrid.innerHTML = results.map(video => `
                 <div class="video-card bg-white rounded-lg shadow-md overflow-hidden">
                     <div class="relative">
-                        <img src="${video.thumbnail}" alt="${video.title}" class="w-full h-48 object-cover">
+                        <img src="${video.thumbnail}" alt="${video.title}" class="w-full h-48 object-cover" onerror="this.src='https://via.placeholder.com/480x360?text=No+Thumbnail'">
                         <div class="absolute bottom-2 right-2 bg-black bg-opacity-75 text-white text-xs px-2 py-1 rounded">
-                            ${video.duration}
+                            ${video.duration || 'N/A'}
                         </div>
                         <div class="absolute top-2 left-2 bg-red-600 text-white text-xs font-bold px-2 py-1 rounded">
                             #${video.rank}
@@ -272,12 +331,12 @@
                     </div>
                     <div class="p-4">
                         <h3 class="font-semibold text-gray-800 mb-2 line-clamp-2 hover:text-red-600">
-                            <a href="${video.url}" target="_blank">${video.title}</a>
+                            <a href="${video.url}" target="_blank" rel="noopener noreferrer">${video.title}</a>
                         </h3>
                         <p class="text-sm text-gray-600 mb-3">${video.channel}</p>
                         <div class="flex items-center text-xs text-gray-500 space-x-3 mb-3">
-                            <span>👁️ ${video.view_count}</span>
-                            <span>📅 ${video.published_date}</span>
+                            <span>👁️ ${video.view_count || 'N/A'}</span>
+                            <span>📅 ${video.published_date || 'N/A'}</span>
                         </div>
                         <div class="flex items-center justify-between text-xs mb-3">
                             <span class="bg-green-100 text-green-700 px-2 py-1 rounded">
@@ -287,48 +346,53 @@
                                 ⭐ ${video.final_score.toFixed(3)}
                             </span>
                         </div>
-                        <p class="text-xs text-gray-600 italic mb-2">💡 ${video.why_relevant}</p>
-                        <p class="text-xs text-gray-500 line-clamp-2">${video.summary}</p>
+                        <p class="text-xs text-gray-600 italic mb-2">💡 ${video.why_relevant || 'Relevant to your query'}</p>
+                        <p class="text-xs text-gray-500 line-clamp-2">${video.summary || 'No summary available'}</p>
                     </div>
                 </div>
             `).join('');
 
             resultsSection.classList.remove('hidden');
+            
+            // Scroll to results
+            resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
 
-        // Mock data for demonstration
-        const mockResults = [
-            {
-                rank: 1,
-                video_id: "E0Hmnixke2g",
-                title: "All Machine Learning algorithms explained in 17 min",
-                channel: "Infinite Codes",
-                url: "https://www.youtube.com/watch?v=E0Hmnixke2g",
-                thumbnail: "https://i.ytimg.com/vi/E0Hmnixke2g/hqdefault.jpg",
-                duration: "16:30",
-                view_count: "1.6M",
-                published_date: "2024-09-17",
-                similarity_score: 0.673,
-                final_score: 0.681,
-                summary: "All Machine Learning algorithms intuitively explained in 17 min",
-                why_relevant: "Discusses machine learning algorithms directly matching your query"
-            },
-            {
-                rank: 2,
-                video_id: "qNxrPri1V0I",
-                title: "Learn Machine Learning Like a GENIUS and Not Waste Time",
-                channel: "Infinite Codes",
-                url: "https://www.youtube.com/watch?v=qNxrPri1V0I",
-                thumbnail: "https://i.ytimg.com/vi/qNxrPri1V0I/hqdefault.jpg",
-                duration: "15:03",
-                view_count: "1.1M",
-                published_date: "2024-11-14",
-                similarity_score: 0.598,
-                final_score: 0.628,
-                summary: "Learn Machine Learning Like a GENIUS and Not Waste Time",
-                why_relevant: "Discusses learning strategies for machine learning"
+        // Drag and drop support
+        function setupDragAndDrop(uploadArea, fileInput) {
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                uploadArea.addEventListener(eventName, preventDefaults, false);
+            });
+
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
             }
-        ];
+
+            ['dragenter', 'dragover'].forEach(eventName => {
+                uploadArea.addEventListener(eventName, () => {
+                    uploadArea.classList.add('border-red-500', 'bg-red-50');
+                });
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                uploadArea.addEventListener(eventName, () => {
+                    uploadArea.classList.remove('border-red-500', 'bg-red-50');
+                });
+            });
+
+            uploadArea.addEventListener('drop', (e) => {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+                if (files.length > 0) {
+                    fileInput.files = files;
+                    fileInput.dispatchEvent(new Event('change'));
+                }
+            });
+        }
+
+        setupDragAndDrop(pdfUploadArea, pdfInput);
+        setupDragAndDrop(imageUploadArea, imageInput);
     </script>
 </body>
 </html>
