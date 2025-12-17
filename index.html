@@ -14,6 +14,10 @@
             border-color: #4299e1;
             background-color: #ebf8ff;
         }
+        .file-upload-area.has-file {
+            border-color: #48bb78;
+            background-color: #f0fff4;
+        }
         .video-card {
             transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
@@ -68,38 +72,35 @@
                     ></textarea>
                 </div>
 
-                <!-- File Upload Section -->
-                <div class="grid md:grid-cols-2 gap-4 mb-4">
-                    <!-- PDF/Word Upload -->
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">
-                            <svg class="inline w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                <!-- PDF Upload Section -->
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        <svg class="inline w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                        </svg>
+                        Document (PDF) 
+                    </label>
+                    <div class="file-upload-area rounded-lg p-4 text-center cursor-pointer" id="pdfUploadArea">
+                        <input type="file" id="pdfInput" accept=".pdf,.doc,.docx" class="hidden">
+                        <div id="uploadPrompt">
+                            <svg class="w-12 h-12 mx-auto mb-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
                             </svg>
-                            Document (PDF/Word)
-                        </label>
-                        <div class="file-upload-area rounded-lg p-4 text-center cursor-pointer" id="pdfUploadArea">
-                            <input type="file" id="pdfInput" accept=".pdf,.doc,.docx" class="hidden">
-                            <p class="text-sm text-gray-600">Click or drag PDF/Word file here</p>
+                            <p class="text-sm text-gray-600 font-medium">Click or drag PDF file here</p>
                             <p class="text-xs text-gray-400 mt-1">Max 50MB</p>
                         </div>
-                        <p id="pdfFileName" class="text-xs text-gray-500 mt-1"></p>
-                    </div>
-
-                    <!-- Image Upload -->
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">
-                            <svg class="inline w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                        <div id="fileInfo" class="hidden">
+                            <svg class="w-12 h-12 mx-auto mb-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                             </svg>
-                            Image (Optional)
-                        </label>
-                        <div class="file-upload-area rounded-lg p-4 text-center cursor-pointer" id="imageUploadArea">
-                            <input type="file" id="imageInput" accept="image/*" class="hidden">
-                            <p class="text-sm text-gray-600">Click or drag image here</p>
-                            <p class="text-xs text-gray-400 mt-1">JPG, PNG, etc.</p>
+                            <p id="fileName" class="text-sm text-gray-700 font-medium mb-2"></p>
+                            <button id="removeFileBtn" class="inline-flex items-center px-3 py-1 bg-red-100 text-red-700 rounded-md hover:bg-red-200 transition text-sm">
+                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                </svg>
+                                Remove File
+                            </button>
                         </div>
-                        <p id="imageFileName" class="text-xs text-gray-500 mt-1"></p>
                     </div>
                 </div>
 
@@ -183,31 +184,46 @@
     <script>
         // File upload handlers
         const pdfInput = document.getElementById('pdfInput');
-        const imageInput = document.getElementById('imageInput');
-        const pdfFileName = document.getElementById('pdfFileName');
-        const imageFileName = document.getElementById('imageFileName');
         const pdfUploadArea = document.getElementById('pdfUploadArea');
-        const imageUploadArea = document.getElementById('imageUploadArea');
+        const uploadPrompt = document.getElementById('uploadPrompt');
+        const fileInfo = document.getElementById('fileInfo');
+        const fileName = document.getElementById('fileName');
+        const removeFileBtn = document.getElementById('removeFileBtn');
 
-        pdfUploadArea.addEventListener('click', () => {
-            pdfInput.click();
-        });
+        let currentFile = null;
 
-        imageUploadArea.addEventListener('click', () => {
-            imageInput.click();
+        pdfUploadArea.addEventListener('click', (e) => {
+            if (!e.target.closest('#removeFileBtn')) {
+                pdfInput.click();
+            }
         });
 
         pdfInput.addEventListener('change', (e) => {
             if (e.target.files.length > 0) {
-                pdfFileName.textContent = `Selected: ${e.target.files[0].name}`;
+                currentFile = e.target.files[0];
+                showFileInfo(currentFile.name);
             }
         });
 
-        imageInput.addEventListener('change', (e) => {
-            if (e.target.files.length > 0) {
-                imageFileName.textContent = `Selected: ${e.target.files[0].name}`;
-            }
+        removeFileBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            clearFile();
         });
+
+        function showFileInfo(name) {
+            fileName.textContent = name;
+            uploadPrompt.classList.add('hidden');
+            fileInfo.classList.remove('hidden');
+            pdfUploadArea.classList.add('has-file');
+        }
+
+        function clearFile() {
+            currentFile = null;
+            pdfInput.value = '';
+            uploadPrompt.classList.remove('hidden');
+            fileInfo.classList.add('hidden');
+            pdfUploadArea.classList.remove('has-file');
+        }
 
         // Top K slider
         const topKSlider = document.getElementById('topKSlider');
@@ -231,10 +247,9 @@
             // Validate input
             const query = queryInput.value.trim();
             const pdfFile = pdfInput.files[0];
-            const imageFile = imageInput.files[0];
 
-            if (!query && !pdfFile && !imageFile) {
-                showError('Please provide at least one input: text query, document, or image');
+            if (!query && !pdfFile) {
+                showError('Please provide at least one input: text query or document');
                 return;
             }
 
@@ -256,10 +271,6 @@
                 
                 if (pdfFile) {
                     formData.append('pdf', pdfFile);
-                }
-                
-                if (imageFile) {
-                    formData.append('image', imageFile);
                 }
                 
                 formData.append('top_k', topKSlider.value);
@@ -359,40 +370,36 @@
         }
 
         // Drag and drop support
-        function setupDragAndDrop(uploadArea, fileInput) {
-            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-                uploadArea.addEventListener(eventName, preventDefaults, false);
-            });
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            pdfUploadArea.addEventListener(eventName, preventDefaults, false);
+        });
 
-            function preventDefaults(e) {
-                e.preventDefault();
-                e.stopPropagation();
-            }
-
-            ['dragenter', 'dragover'].forEach(eventName => {
-                uploadArea.addEventListener(eventName, () => {
-                    uploadArea.classList.add('border-red-500', 'bg-red-50');
-                });
-            });
-
-            ['dragleave', 'drop'].forEach(eventName => {
-                uploadArea.addEventListener(eventName, () => {
-                    uploadArea.classList.remove('border-red-500', 'bg-red-50');
-                });
-            });
-
-            uploadArea.addEventListener('drop', (e) => {
-                const dt = e.dataTransfer;
-                const files = dt.files;
-                if (files.length > 0) {
-                    fileInput.files = files;
-                    fileInput.dispatchEvent(new Event('change'));
-                }
-            });
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
         }
 
-        setupDragAndDrop(pdfUploadArea, pdfInput);
-        setupDragAndDrop(imageUploadArea, imageInput);
+        ['dragenter', 'dragover'].forEach(eventName => {
+            pdfUploadArea.addEventListener(eventName, () => {
+                pdfUploadArea.classList.add('border-red-500', 'bg-red-50');
+            });
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            pdfUploadArea.addEventListener(eventName, () => {
+                pdfUploadArea.classList.remove('border-red-500', 'bg-red-50');
+            });
+        });
+
+        pdfUploadArea.addEventListener('drop', (e) => {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            if (files.length > 0) {
+                pdfInput.files = files;
+                currentFile = files[0];
+                showFileInfo(currentFile.name);
+            }
+        });
     </script>
 </body>
 </html>

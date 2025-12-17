@@ -13,7 +13,7 @@ import tempfile
 # Thêm thư mục gốc vào Python path
 sys.path.insert(0, os.path.abspath('.'))
 
-from processors.image_processor import MultimodalProcessor
+from processors.input_processor import InputProcessor
 from processors.similarity import SimilarityCalculator
 from database.embeddings_store import EmbeddingsStore
 from processors.embeddings import EmbeddingGenerator
@@ -29,11 +29,11 @@ CORS(app)
 embeddings_store = None
 similarity_calc = None
 embedding_generator = None
-multimodal_processor = None
+input_processor = None
 
 def initialize_system():
     """Khởi tạo các components của hệ thống"""
-    global embeddings_store, similarity_calc, embedding_generator, multimodal_processor
+    global embeddings_store, similarity_calc, embedding_generator, input_processor
     
     logger.info("Initializing recommendation system...")
     
@@ -41,7 +41,7 @@ def initialize_system():
         embeddings_store = EmbeddingsStore()
         similarity_calc = SimilarityCalculator()
         embedding_generator = EmbeddingGenerator()
-        multimodal_processor = MultimodalProcessor()
+        input_processor = InputProcessor()
         
         # Load videos database
         videos = embeddings_store.load_embeddings()
@@ -92,7 +92,6 @@ def api_search():
     Expected form data:
         - query: text query (optional)
         - pdf: PDF file (optional)
-        - image: image file (optional)
         - top_k: number of results (default: 5)
     """
     try:
@@ -103,14 +102,13 @@ def api_search():
         logger.info(f"Received search request: query='{query}', top_k={top_k}")
         
         # Validate input
-        if not query and 'pdf' not in request.files and 'image' not in request.files:
+        if not query and 'pdf' not in request.files:
             return jsonify({
-                'error': 'Must provide at least one input: query, pdf, or image'
+                'error': 'Must provide at least one input: query or pdf'
             }), 400
         
-        # Handle file uploads
+        # Handle file upload
         pdf_path = None
-        image_path = None
         
         if 'pdf' in request.files and request.files['pdf'].filename:
             pdf_file = request.files['pdf']
@@ -118,19 +116,36 @@ def api_search():
             pdf_file.save(pdf_path)
             logger.info(f"Saved PDF: {pdf_path}")
         
-        if 'image' in request.files and request.files['image'].filename:
-            image_file = request.files['image']
-            image_path = os.path.join(tempfile.gettempdir(), image_file.filename)
-            image_file.save(image_path)
-            logger.info(f"Saved image: {image_path}")
+        # Process input
+        logger.info("Processing input...")
         
-        # Process multimodal input
-        logger.info("Processing multimodal input...")
-        processed_text = multimodal_processor.process_multimodal_input(
-            text_query=query if query else None,
-            image_path=image_path,
-            pdf_path=pdf_path
-        )
+        if pdf_path:
+            # Extract PDF text
+            raw_text, metadata = input_processor.extract_pdf_text(pdf_path)
+            
+            if not raw_text:
+                # Clean up
+                if pdf_path and os.path.exists(pdf_path):
+                    os.remove(pdf_path)
+                return jsonify({'error': 'Failed to extract text from PDF. Please ensure it is not a scanned image.'}), 400
+            
+            # Preprocess PDF text
+            processed_pdf = input_processor.preprocess_file_text(raw_text, metadata)
+            
+            if query:
+                # Combine query and PDF
+                processed_query = input_processor.process_query_text(query)
+                processed_text = input_processor.combine_query_and_file(
+                    processed_query, 
+                    processed_pdf, 
+                    strategy='weighted'
+                )
+            else:
+                # PDF only
+                processed_text = processed_pdf
+        else:
+            # Query only
+            processed_text = input_processor.process_query_text(query)
         
         if not processed_text:
             return jsonify({'error': 'Failed to process input'}), 500
@@ -162,7 +177,7 @@ def api_search():
         # Format results
         formatted_results = similarity_calc.format_results(
             top_videos,
-            query or "multimodal query"
+            query or "PDF document query"
         )
         
         logger.info(f"Returning {len(formatted_results)} results")
@@ -170,8 +185,6 @@ def api_search():
         # Clean up temporary files
         if pdf_path and os.path.exists(pdf_path):
             os.remove(pdf_path)
-        if image_path and os.path.exists(image_path):
-            os.remove(image_path)
         
         return jsonify(formatted_results)
         
